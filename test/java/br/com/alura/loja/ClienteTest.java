@@ -18,6 +18,7 @@ import com.alura.loja.Servidor;
 import com.google.gson.Gson;
 import com.thoughtworks.xstream.XStream;
 
+import br.com.alura.loja.dao.CarrinhoDAO;
 import br.com.alura.loja.modelo.Carrinho;
 import br.com.alura.loja.modelo.Produto;
 import br.com.alura.loja.modelo.Projeto;
@@ -36,18 +37,12 @@ public class ClienteTest {
 		ClientConfig config = new ClientConfig();
 		config.register(new LoggingFilter());
 		this.client = ClientBuilder.newClient(config);
-		this.target = client.target("http://www.mocky.io");
+		this.target = client.target("http://localhost:8888");
 	}
 	
 	@After
 	public void serverStop() {
 		server.serverStop();
-	}
-	
-	@Test
-	public void testaQueAConexaoComOServidorFunciona() {
-		String conteudo = target.path("/v2/52aaf5deee7ba8c70329fb7d").request().get(String.class);
-		Assert.assertTrue(conteudo.contains("<rua>Rua Vergueiro 3185"));
 	}
 	
 	@Test
@@ -92,6 +87,23 @@ public class ClienteTest {
 
         Response response = this.target.path("/carrinhos").request().post(entity);
         Assert.assertEquals(201, response.getStatus());
+	}
+	
+	@Test
+	public void testaAlterarUmProduto() {
+		Carrinho carrinho = new CarrinhoDAO().busca(1L);
+		Produto produto = new Produto(3467L, "Videogame 4", 4000, 327);
+		
+		String xml = produto.toXML();
+		
+		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML);
+		
+		Response response = this.target.path("/carrinhos/"+carrinho.getId()+"/produtos/"+produto.getId()).request().put(entity);
+		Assert.assertEquals(200, response.getStatus());
+		
+		String carrinhoNovoXml = this.target.path("carrinhos/"+carrinho.getId()).request().get(String.class);
+		Carrinho carrinhoNovo = (Carrinho)new XStream().fromXML(carrinhoNovoXml);
+		Assert.assertEquals(carrinhoNovo.getProdutos().get(1).getQuantidade(), 327);
 	}
 
 }
